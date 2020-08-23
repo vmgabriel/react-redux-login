@@ -5,7 +5,7 @@ import ReactDOM from 'react-dom';
 // Components
 import App from './App';
 
-ReactDOM.render(
-  <App />,
-  document.getElementById('root')
-);
+// Styles Base
+import './assets/styles/global.scss';
+
+ReactDOM.render(<App />, document.getElementById('root'));
