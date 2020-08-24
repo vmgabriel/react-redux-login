@@ -1,82 +1,110 @@
 // Libraries
 import React from 'react';
+import { useSnackbar } from 'notistack';
 
-// Material
-import {
-  Container,
-  Grid,
-  Typography,
-  TextField,
-  Button,
-} from '@material-ui/core';
+// Components
+import DynamicForm from './generics/DynamicForm';
 
-// Material Styles
-import {
-  makeStyles,
-} from '@material-ui/core/styles';
+// Validation
+import validate from '../utils/validation';
 
-// Styles
-const useStyles = makeStyles((theme) => ({
-  root: {
-    width: '100%',
-    height: '40vh',
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(2),
+const changeValueById = ([field, ...restField]) => (id) => (value) => {
+  if (!field) return [];
+  const uField = (field.id !== id) ? field : { ...field, value };
+  return [uField].concat(changeValueById(restField)(id)(value));
+};
+
+const getValues = ([field, ...restField]) => (values = {}) => {
+  if (!field) return values;
+  const value = (field.type === 'button') ? values : { ...values, [field.name]: field.value };
+  return {
+    ...value,
+    ...getValues(restField)(value),
+  };
+};
+
+const data = {
+  title: {
+    value: 'Login',
+    variant: 'h5',
   },
-  content: {
-    border: '1px solid',
-    borderColor: theme.palette.primary.light,
-    boxShadow: `5px 5px ${theme.palette.primary.light}`,
-    borderRadius: 16,
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    textAlign: 'center',
-    alignContent: 'center',
-    padding: theme.spacing(4),
-  },
-  paper: {
-    width: '100%',
-    marginTop: theme.spacing(2),
-  },
-  boxButtom: {
-    width: '100%',
-    marginTop: theme.spacing(4),
-  },
-}));
+  fields: [
+    {
+      id: 'txt_username',
+      name: 'username',
+      label: 'Username',
+      required: true,
+      isError: false,
+      messageError: '',
+      type: 'text',
+      autoFocus: true,
+      min: true,
+      max: true,
+      value: '',
+    },
+    {
+      id: 'txt_password',
+      name: 'password',
+      label: 'Password',
+      required: true,
+      isError: false,
+      min: true,
+      max: true,
+      messageError: '',
+      type: 'password',
+      autoFocus: false,
+      value: '',
+    },
+    {
+      id: 'btn_submit',
+      name: 'submit',
+      label: 'Login',
+      type: 'button',
+      variant: 'contained',
+      color: 'primary',
+    },
+  ],
+};
 
 const Login = () => {
-  const classes = useStyles();
+  const [form, setForm] = React.useState(data);
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+
+  const sendAlert = (message) => (variant = 'default') => {
+    enqueueSnackbar(message, { variant });
+  };
+
+  const handleOnChange = (event) => {
+    setForm({
+      ...form,
+      fields: changeValueById(form.fields)(event.target.id)(event.target.value),
+    });
+  };
+
+  const handleClickSubmit = () => {
+    console.log('click');
+    const values = getValues(form.fields)();
+    const validation = form.fields.map(validate(values));
+    const isError = validation.reduce((acc, curr) => curr.isError || acc, false);
+    if (isError) {
+      setForm({
+        ...form,
+        fields: validation,
+      });
+      sendAlert('Data not Valid')('error');
+
+    } else {
+      console.log('validado correctamente');
+      sendAlert('Validation Correctly')('success');
+    }
+  };
 
   return (
-    <Container maxWidth='sm' className={classes.root}>
-      <Grid container className={classes.content}>
-        <Typography variant='h5'>
-          Login
-        </Typography>
-        <TextField
-          type='text'
-          id='username'
-          label='username'
-          className={classes.paper}
-        />
-        <TextField
-          type='password'
-          id='password'
-          label='password'
-          className={classes.paper}
-        />
-        <Button
-          variant='contained'
-          color='primary'
-          className={classes.boxButtom}
-        >
-          Submit
-        </Button>
-      </Grid>
-    </Container>
+    <DynamicForm
+      form={form}
+      onChange={handleOnChange}
+      onSubmit={handleClickSubmit}
+    />
   );
 };
 

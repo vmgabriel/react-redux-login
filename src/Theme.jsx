@@ -18,6 +18,10 @@ const theme = createMuiTheme({
       contrastText: '#dfe0df',
     },
   },
+  background: {
+    paper: '#ddd',
+    default: '#fbfbfb',
+  },
 });
 
 export default theme;
