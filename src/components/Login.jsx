@@ -2,26 +2,21 @@
 import React from 'react';
 import { useSnackbar } from 'notistack';
 
+// Redux
+import { connect } from 'react-redux';
+
 // Components
 import DynamicForm from './generics/DynamicForm';
 
 // Validation
 import validate from '../utils/validation';
 
-const changeValueById = ([field, ...restField]) => (id) => (value) => {
-  if (!field) return [];
-  const uField = (field.id !== id) ? field : { ...field, value };
-  return [uField].concat(changeValueById(restField)(id)(value));
-};
+// Utils
+import { changeValueById, getValues, clearValues } from '../utils/dynamic-forms';
+// import { verifyCredential } from '../utils/middlewares/session';
 
-const getValues = ([field, ...restField]) => (values = {}) => {
-  if (!field) return values;
-  const value = (field.type === 'button') ? values : { ...values, [field.name]: field.value };
-  return {
-    ...value,
-    ...getValues(restField)(value),
-  };
-};
+// Redux Actions
+import * as sessionActions from '../actions/sessionAction';
 
 const data = {
   title: {
@@ -66,13 +61,27 @@ const data = {
   ],
 };
 
-const Login = () => {
-  const [form, setForm] = React.useState(data);
-  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+const sendToHome = (history) => history.push('/auth');
 
-  const sendAlert = (message) => (variant = 'default') => {
-    enqueueSnackbar(message, { variant });
-  };
+const Login = (props) => {
+  console.log('props - ', props);
+  const { loading, error, errorMessage, session } = props;
+  const [form, setForm] = React.useState(data);
+  const { enqueueSnackbar } = useSnackbar();
+
+  const sendAlert = (message) => (variant = 'default') => enqueueSnackbar(message, { variant });
+
+  React.useEffect((data) => {
+    if ('_id' in session) {
+      sendAlert('credentials valids')('success');
+      setForm({
+        ...form,
+        fields: clearValues(form.fields),
+      });
+      sendToHome(props.history);
+    }
+    if (error) props.clearErrors();
+  }, [session, error]);
 
   const handleOnChange = (event) => {
     setForm({
@@ -81,8 +90,7 @@ const Login = () => {
     });
   };
 
-  const handleClickSubmit = () => {
-    console.log('click');
+  const handleClickSubmit = async () => {
     const values = getValues(form.fields)();
     const validation = form.fields.map(validate(values));
     const isError = validation.reduce((acc, curr) => curr.isError || acc, false);
@@ -92,20 +100,29 @@ const Login = () => {
         fields: validation,
       });
       sendAlert('Data not Valid')('error');
-
     } else {
-      console.log('validado correctamente');
-      sendAlert('Validation Correctly')('success');
+      props.loadSession(values);
     }
   };
 
   return (
     <DynamicForm
       form={form}
+      error={error}
+      errorMessage={errorMessage}
+      loading={loading}
       onChange={handleOnChange}
       onSubmit={handleClickSubmit}
     />
   );
 };
 
-export default Login;
+const mapStatesToProps = (reducers) => {
+  return reducers.sessionReducer;
+};
+
+/* const mapActionsToProps = () => ({
+ *   loadSession,
+ * }); */
+
+export default connect(mapStatesToProps, sessionActions)(Login);

@@ -1,5 +1,6 @@
 // Libraries
 import React from 'react';
+import { useSnackbar } from 'notistack';
 
 // Material
 import {
@@ -15,11 +16,14 @@ import {
   makeStyles,
 } from '@material-ui/core/styles';
 
+// Components
+import Spinner from './Spinner';
+
 // Styles
 const useStyles = makeStyles((theme) => ({
   root: {
     width: '100%',
-    height: '40vh',
+    minHeight: '40vh',
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(2),
   },
@@ -88,20 +92,39 @@ const getDataForm = (theme) => (submit) => (onChange) => (field) => {
   );
 };
 
-const DynamicForm = ({ form, onChange, onSubmit }) => {
+const cycleForm = (classes) => ({ form, onSubmit, onChange, loading }) => {
+  if (loading) {
+    return <Spinner />;
+  }
+
+  const generateFields = getDataForm(classes)(onSubmit)(onChange);
   console.log('form - ', form);
+  return (
+    <React.Fragment>
+      <Grid item xs={12}>
+        <Typography variant={form.title.variant || 'h5'}>
+          {form.title.value || 'Title'}
+        </Typography>
+      </Grid>
+
+      {form.fields.map(generateFields)}
+    </React.Fragment>
+  );
+};
+
+const DynamicForm = (props) => {
   const classes = useStyles();
-  const generateForm = getDataForm(classes)(onSubmit)(onChange);
+  const { enqueueSnackbar } = useSnackbar();
+  const { error, errorMessage } = props;
+
+  React.useEffect(() => {
+    if (error) enqueueSnackbar(errorMessage, { variant: 'error' });
+  }, [error]);
 
   return (
     <Container maxWidth='sm' className={classes.root}>
       <Grid container className={classes.content}>
-        <Grid item xs={12}>
-          <Typography variant={form.title.variant || 'h5'}>
-            {form.title.value || 'Title'}
-          </Typography>
-        </Grid>
-        {form.fields.map(generateForm)}
+        { cycleForm(classes)(props) }
       </Grid>
     </Container>
   );
